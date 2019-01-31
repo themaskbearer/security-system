@@ -1,5 +1,6 @@
 
 from enum import Enum
+import konnected
 
 
 class EventType(Enum):
@@ -56,11 +57,31 @@ class Alarm(State):
         self.add_transition(EventType.disarm, StateType.disarmed)
 
 
-list_of_states = [Disarmed(), Armed(), Warning(), Alarm()]
+class AlarmSystem:
+    def __init__(self):
+        self._state_machine = {StateType.disarmed: Disarmed(),
+                               StateType.armed: Armed(),
+                               StateType.warning: Warning(),
+                               StateType.alarm: Alarm()}
+        self._current_state = StateType.disarmed
 
-state = list_of_states[0].process_event(EventType.arm)
-state = list_of_states[state.value].process_event(EventType.disarm)
-state = list_of_states[state.value].process_event(EventType.arm)
-state = list_of_states[state.value].process_event(EventType.sensor_tripped)
+    def get_zone_status(self):
+        pass
+
+    def process_command(self, command):
+        pass
+
+
+# class Zone:
+#     def __init__(self):
+#         self._zones = konnected.Client()
+
+
+list_of_states = {StateType.disarmed: Disarmed(), StateType.armed: Armed(), StateType.warning: Warning(), StateType.alarm: Alarm()}
+
+state = list_of_states[StateType.disarmed].process_event(EventType.arm)
+state = list_of_states[state].process_event(EventType.disarm)
+state = list_of_states[state].process_event(EventType.arm)
+state = list_of_states[state].process_event(EventType.sensor_tripped)
 
 print(state)

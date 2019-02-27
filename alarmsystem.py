@@ -1,6 +1,12 @@
+# Install the following packages with pip to use this script:
+#   - requests (konnected needs this)
+#   - flask
+#   - flask-restful
 
 from enum import Enum
 import konnected
+from flask import Flask
+from flask_restful import Resource, Api, reqparse
 
 
 class EventType(Enum):
@@ -76,8 +82,8 @@ class AlarmSystem:
 #     def __init__(self):
 #         self._zones = konnected.Client()
 
-
-list_of_states = {StateType.disarmed: Disarmed(), StateType.armed: Armed(), StateType.warning: Warning(), StateType.alarm: Alarm()}
+list_of_states = {StateType.disarmed: Disarmed(), StateType.armed: Armed(), StateType.warning: Warning(),
+                  StateType.alarm: Alarm()}
 
 state = list_of_states[StateType.disarmed].process_event(EventType.arm)
 state = list_of_states[state].process_event(EventType.disarm)
@@ -85,3 +91,29 @@ state = list_of_states[state].process_event(EventType.arm)
 state = list_of_states[state].process_event(EventType.sensor_tripped)
 
 print(state)
+
+app = Flask(__name__)
+api = Api(app)
+
+parser = reqparse.RequestParser()
+parser.add_argument("event")
+
+
+class SystemState(Resource):
+    def get(self):
+        return {'current state': state.name}
+
+    def put(self):
+        global state
+        args = parser.parse_args()
+        event = EventType[args['event']]
+        state = list_of_states[state].process_event(event)
+        return {'current state': state.name}, 201
+
+
+api.add_resource(SystemState, '/state')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+

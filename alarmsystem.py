@@ -8,7 +8,6 @@ import konnected
 from flask import Flask
 from flask_restful import Api
 
-import alarmstates
 import alarmpanel
 
 # class Zone:
@@ -20,7 +19,6 @@ if __name__ == '__main__':
     app = Flask(__name__)
     api = Api(app)
 
-    alarmpanel.alarm_system = alarmstates.AlarmSystem()
     panel = alarmpanel.SystemState()
     panel.map_uris(api)
 

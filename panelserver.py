@@ -8,7 +8,7 @@ parser.add_argument("event")
 alarm_state_machine = alarmstates.AlarmStateMachine()
 
 
-class SystemState(Resource):
+class PanelServer(Resource):
     def get(self):
         # TODO: need to differentiate between state requests and sensor requests, or just include everything
         return {'current state': alarm_state_machine.get_current_state().name}
@@ -27,5 +27,5 @@ class SystemState(Resource):
         pass
 
     def map_uris(self, api):
-        api.add_resource(SystemState, '/state')
+        api.add_resource(PanelServer, '/state')
 

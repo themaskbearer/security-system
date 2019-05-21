@@ -1,11 +1,14 @@
 
 from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EventType(Enum):
     arm = 1
     disarm = 2
-    sensor_tripped = 3
+    sensor_changed = 3
     warning_expired = 4
 
 
@@ -30,18 +33,36 @@ class State:
     def add_transition(self, event, state):
         self._transitions[event] = state
 
+    def on_entry(self):
+        logger.info("State %s on_entry", type(self).__name__)
+        pass
+
+    def on_exit(self):
+        logger.info("State %s on_exit", type(self).__name__)
+        pass
+
 
 class Disarmed(State):
     def __init__(self):
         State.__init__(self, StateType.disarmed)
         self.add_transition(EventType.arm, StateType.armed)
 
+    def process_event(self, event):
+        # Process door chime
+
+        return State.process_event(self, event)
+
 
 class Armed(State):
     def __init__(self):
         State.__init__(self, StateType.armed)
         self.add_transition(EventType.disarm, StateType.disarmed)
-        self.add_transition(EventType.sensor_tripped, StateType.warning)
+        self.add_transition(EventType.sensor_changed, StateType.warning)
+
+    def process_event(self, event):
+        # Process if sensor that was tripped should trigger alarm
+
+        return State.process_event(self, event)
 
 
 class Warning(State):
@@ -50,11 +71,27 @@ class Warning(State):
         self.add_transition(EventType.disarm, StateType.disarmed)
         self.add_transition(EventType.warning_expired, StateType.alarm)
 
+    def on_entry(self):
+        # turn on warning beep
+        State.on_entry(self)
+
+    def on_exit(self):
+        # turn off warning beep
+        State.on_exit(self)
+
 
 class Alarm(State):
     def __init__(self):
         State.__init__(self, StateType.alarm)
         self.add_transition(EventType.disarm, StateType.disarmed)
+
+    def on_entry(self):
+        # turn on alarm
+        State.on_entry(self)
+
+    def on_exit(self):
+        # turn off alarm
+        State.on_exit(self)
 
 
 class AlarmStateMachine:
@@ -72,7 +109,13 @@ class AlarmStateMachine:
         pass
 
     def process_event(self, event):
-        self._current_state = self._state_machine[self._current_state].process_event(event)
+        new_state = self._state_machine[self._current_state].process_event(event)
+
+        if self._current_state != new_state:
+            self._state_machine[self._current_state].on_exit()
+            self._state_machine[new_state].on_entry()
+            self._current_state = new_state
+
         return self._current_state
 
     @staticmethod

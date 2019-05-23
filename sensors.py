@@ -1,4 +1,5 @@
 
+from flask import request
 from flask_restful import Resource, reqparse, abort
 import logging
 import json
@@ -7,6 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 sensor_list = {}
+
+parser = reqparse.RequestParser()
+parser.add_argument('state')
+parser.add_argument('pin')
 
 
 def load_sensors(config):
@@ -63,16 +68,23 @@ class SensorsHandler(Resource):
             abort(404, message="Sensor ID {} doesn't exist".format(sensor_id))
 
     def get(self, sensor_id):
-        logger.info("GET function for sensor_id " + str(sensor_id))
+        logger.info("GET function for sensor_id " + str(sensor_id) + ", raw data: " + request.get_data(as_text=True))
         self.abort_if_doesnt_exist(sensor_id)
 
         # TODO: determine serialization to return
+        # Does this matter?  This is for konnected
         return json.dumps(sensor_list[sensor_id], default=lambda o: o.__dict__, indent=4)
 
     def put(self, sensor_id):
-        logger.info("PUT function for sensor_id " + str(sensor_id))
+        logger.info("PUT function for sensor_id " + str(sensor_id) + ", raw data: " + request.get_data(as_text=True))
         self.abort_if_doesnt_exist(sensor_id)
 
-        # access sensor in list and update values
+        args = parser.parse_args()
+        pin = int(args['pin'])
+        if pin not in sensor_list[sensor_id].zones:
+            abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))
+
+        sensor_list[sensor_id].zones[pin].state = int(args['state'])
+
         return 200
 

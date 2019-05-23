@@ -61,6 +61,8 @@ class Armed(State):
 
     def process_event(self, event):
         # Process if sensor that was tripped should trigger alarm
+        # Return back StateType.armed if ignoring the sensor
+        # - i.e. motion sensor during Arm.stay
 
         return State.process_event(self, event)
 
@@ -73,10 +75,12 @@ class Warning(State):
 
     def on_entry(self):
         # turn on warning beep
+        # Start timer
         State.on_entry(self)
 
     def on_exit(self):
         # turn off warning beep
+        # Disable timer
         State.on_exit(self)
 
 
@@ -100,7 +104,9 @@ class AlarmStateMachine:
                                StateType.armed: Armed(),
                                StateType.warning: Warning(),
                                StateType.alarm: Alarm()}
+
         self._current_state = StateType.disarmed
+        self._state_machine[self._current_state].on_entry()
 
     def get_current_state(self):
         return self._current_state

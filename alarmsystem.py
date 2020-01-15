@@ -10,6 +10,7 @@ import sys
 import configparser
 import logging
 import panelhandler
+import alarmstates
 import sensors
 
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,7 @@ def load_config(filename):
     config.read(filename)
 
     sensors.load_sensors(config)
+    alarmstates.load_arm_configurations(config)
 
 
 if __name__ == '__main__':

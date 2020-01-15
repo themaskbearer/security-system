@@ -6,22 +6,22 @@ import alarmstates
 
 parser = reqparse.RequestParser()
 parser.add_argument("event")
-
-alarm_state_machine = alarmstates.AlarmStateMachine()
+parser.add_argument("config")
 
 
 class PanelHandler(Resource):
     def get(self):
-        return {'current state': alarm_state_machine.get_current_state().name}
+        return {'current state': alarmstates.alarm_state_machine.get_current_state().name}
 
     def post(self):
         args = parser.parse_args()
         event = alarmstates.EventType[args['event']]
+        config = args['config']
         # TODO: Re-enable this when testing is done
         # if not alarmstates.AlarmStateMachine.is_valid_external_event(event):
         #     return {'error': 'invalid event ' + args['event']}, 400
 
-        state = alarm_state_machine.process_event(event)
+        state = alarmstates.alarm_state_machine.process_event(event, config)
         return {'current state': state.name}, 201
 
 

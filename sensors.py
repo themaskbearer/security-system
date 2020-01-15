@@ -4,6 +4,8 @@ from flask_restful import Resource, reqparse, abort
 import logging
 import json
 
+import alarmstates
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,7 +86,9 @@ class SensorsHandler(Resource):
         if pin not in sensor_list[sensor_id].zones:
             abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))
 
+        sensor_data = (sensor_id, args['pin'])
         sensor_list[sensor_id].zones[pin].state = int(args['state'])
+        alarmstates.alarm_state_machine.process_event(alarmstates.EventType.sensor_changed, sensor_data)
 
         return 200
 

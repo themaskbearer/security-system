@@ -43,6 +43,13 @@ def load_arm_configurations(config):
         arm_configurations.configurations[name] = new_config
 
 
+def is_valid_arm_config(config):
+    if config in arm_configurations.configurations:
+        return True
+
+    return False
+
+
 class EventType(Enum):
     arm = 1
     disarm = 2
@@ -91,8 +98,6 @@ class Disarmed(State):
             return StateType.disarmed
 
         elif event == EventType.arm:
-            # TODO: create a default or safety in case a configuration isn't specified, or what to do if an invalid
-            #  config specified
             arm_configurations.current_configuration = data
             return State.process_event(self, event, data)
 

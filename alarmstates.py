@@ -18,7 +18,7 @@ class ArmConfiguration:
     def __init__(self, name):
         self.name = name
         self.sensors = []
-        self.pins = {}
+        self.zones = {}
 
 
 arm_configurations = ArmConfigurations()
@@ -35,10 +35,10 @@ def load_arm_configurations(config):
         new_config.sensors = sensor_list
 
         for sensor in sensor_list:
-            pins = config[name].get(sensor + "_pins")
-            pin_list = pins.split(',')
-
-            new_config.pins[sensor] = pin_list
+            zones = config[name].get(sensor + "_zones")
+            zone_list = zones.split(',')
+            zone_list = map(int, zone_list)
+            new_config.zones[sensor] = list(zone_list)
 
         arm_configurations.configurations[name] = new_config
 
@@ -87,11 +87,15 @@ class Disarmed(State):
 
     def process_event(self, event, data):
         if event == EventType.sensor_changed:
-            # Process door chime
+            # TODO: Process door chime
             return StateType.disarmed
+
         elif event == EventType.arm:
+            # TODO: create a default or safety in case a configuration isn't specified, or what to do if an invalid
+            #  config specified
             arm_configurations.current_configuration = data
             return State.process_event(self, event, data)
+
         else:
             return State.process_event(self, event, data)
 
@@ -106,12 +110,14 @@ class Armed(State):
         if event == EventType.sensor_changed:
             current_arm_config = arm_configurations.get_current_configuration()
             sensor = data[0]
-            pin = data[1]
+            zone = data[1]
+
             if sensor in current_arm_config.sensors:
-                if pin in current_arm_config.pins[sensor]:
+                if zone in current_arm_config.zones[sensor]:
                     return State.process_event(self, event, data)
 
             return StateType.armed
+
         else:
             return State.process_event(self, event, data)
 
@@ -123,12 +129,12 @@ class Alert(State):
         self.add_transition(EventType.alert_expired, StateType.alarm)
 
     def on_entry(self):
-        # turn on warning beep
+        # TODO: turn on warning beep
         # Start timer
         State.on_entry(self)
 
     def on_exit(self):
-        # turn off warning beep
+        # TODO: turn off warning beep
         # Disable timer
         State.on_exit(self)
 

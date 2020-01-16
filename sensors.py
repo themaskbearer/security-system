@@ -23,11 +23,19 @@ def load_sensors(config):
     for sensor_id in sensor_id_list:
         new_sensor = Sensor()
         new_sensor.id = sensor_id
-        new_sensor.pins = config[sensor_id].getint('pins', 0)
+        new_sensor.total_pins = config[sensor_id].getint('pins', 0)
         new_sensor.ip = config[sensor_id].get('ip', "127.0.0.1")
         new_sensor.port = config[sensor_id].get('port', 65000)
 
-        for pin_number in range(1, new_sensor.pins + 1):
+        new_sensor.total_zones = config[sensor_id].getint('zones', 0)
+
+        for zone_number in range(1, new_sensor.total_zones + 1):
+            new_zone = Zone()
+            new_zone.number = zone_number
+            new_zone.name = config[sensor_id].get('zone' + str(zone_number) + '_name', '')
+            new_sensor.zones[zone_number] = new_zone
+
+        for pin_number in range(1, new_sensor.total_pins + 1):
             pin_str = 'pin' + str(pin_number)
 
             pin_type = config[sensor_id].get(pin_str)
@@ -35,12 +43,15 @@ def load_sensors(config):
                 # Do stuff for output pins
                 pass
             else:
-                new_zone = Zone()
-                new_zone.name = config[sensor_id].get(pin_str + '_name', '')
-                new_zone.sensor_id = sensor_id
-                new_zone.pin = pin_number
+                new_pin = Pin()
+                new_pin.pin = pin_number
 
-                new_sensor.zones[pin_number] = new_zone
+                pin_zone = config[sensor_id].getint(pin_str + '_zone')
+                if pin_zone is not None:
+                    new_pin.zone = new_sensor.zones[pin_zone]
+                    new_pin.zone.pins[pin_number] = new_pin
+
+                new_sensor.pins[pin_number] = new_pin
 
         sensor_list[sensor_id] = new_sensor
 
@@ -48,19 +59,35 @@ def load_sensors(config):
 class Sensor:
     def __init__(self):
         self.id = ""
-        self.pins = 0
+        self.total_pins = 0
+        self.total_zones = 0
         self.ip = "127.0.0.1"
         self.port = 12345
 
         self.zones = {}
+        self.pins = {}
 
 
 class Zone:
     def __init__(self):
-        self.sensor_id = ""
-        self.pin = 0
+        self.number = 0
+        self.pins = {}
         self.state = 0
         self.name = ""
+
+    def update_state(self):
+        new_state = 0
+        for pin in self.pins:
+            new_state = new_state or self.pins[pin].state
+
+        self.state = new_state
+
+
+class Pin:
+    def __init__(self):
+        self.pin_number = 0
+        self.state = 0
+        self.zone = None
 
 
 class SensorsHandler(Resource):
@@ -82,13 +109,19 @@ class SensorsHandler(Resource):
         self.abort_if_doesnt_exist(sensor_id)
 
         args = parser.parse_args()
-        pin = int(args['pin'])
-        if pin not in sensor_list[sensor_id].zones:
+        pin_number = int(args['pin'])
+        if pin_number not in sensor_list[sensor_id].pins:
             abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))
 
-        sensor_data = (sensor_id, args['pin'])
-        sensor_list[sensor_id].zones[pin].state = int(args['state'])
-        alarmstates.alarm_state_machine.process_event(alarmstates.EventType.sensor_changed, sensor_data)
+        pin = sensor_list[sensor_id].pins[pin_number]
+        pin.state = int(args['state'])
+
+        if pin.zone is not None:
+            pin.zone.update_state()
+
+            if pin.zone.state == 1:
+                zone_data = (sensor_id, pin.zone.number)
+                alarmstates.alarm_state_machine.process_event(alarmstates.EventType.sensor_changed, zone_data)
 
         return 200
 

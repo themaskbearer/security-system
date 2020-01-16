@@ -116,6 +116,8 @@ class SensorsHandler(Resource):
         pin = sensor_list[sensor_id].pins[pin_number]
         pin.state = int(args['state'])
 
+        # TODO: Process door chime
+
         if pin.zone is not None:
             pin.zone.update_state()
 

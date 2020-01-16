@@ -20,8 +20,9 @@ class PanelHandler(Resource):
         if not alarmstates.AlarmStateMachine.is_valid_external_event(event):
             return {'error': 'invalid event ' + args['event']}, 400
 
-        if not alarmstates.is_valid_arm_config(config):
-            return {'error': 'invalid arm_config ' + config}, 400
+        if event == alarmstates.EventType.arm:
+            if not alarmstates.is_valid_arm_config(config):
+                return {'error': 'invalid arm_config ' + (config if config else "")}, 400
 
         state = alarmstates.alarm_state_machine.process_event(event, config)
         return {'current state': state.name}, 201

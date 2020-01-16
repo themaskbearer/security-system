@@ -1,6 +1,7 @@
 
 from enum import Enum
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +94,9 @@ class Disarmed(State):
         self.add_transition(EventType.arm, StateType.armed)
 
     def process_event(self, event, data):
-        if event == EventType.sensor_changed:
-            # TODO: Process door chime
-            return StateType.disarmed
-
-        elif event == EventType.arm:
+        if event == EventType.arm:
             arm_configurations.current_configuration = data
             return State.process_event(self, event, data)
-
         else:
             return State.process_event(self, event, data)
 
@@ -132,16 +128,23 @@ class Alert(State):
         State.__init__(self, StateType.alert)
         self.add_transition(EventType.disarm, StateType.disarmed)
         self.add_transition(EventType.alert_expired, StateType.alarm)
+        self._transition_timer = None
 
     def on_entry(self):
         # TODO: turn on warning beep
-        # Start timer
+        # TODO: pull the duration from the config file
+        self._transition_timer = threading.Timer(30.0, self.process_expired_alert)
+        self._transition_timer.start()
         State.on_entry(self)
 
     def on_exit(self):
         # TODO: turn off warning beep
-        # Disable timer
+        self._transition_timer.cancel()
         State.on_exit(self)
+
+    def process_expired_alert(self):
+        logger.info("Alert timer expired, transitioning to Alarm")
+        alarm_state_machine.process_event(EventType.alert_expired, None)
 
 
 class Alarm(State):

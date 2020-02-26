@@ -12,6 +12,7 @@ import logging
 import panelhandler
 import alarmstates
 import sensors
+import konnected_server
 
 logging.basicConfig(level=logging.INFO)
 
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     api = Api(app)
 
     api.add_resource(panelhandler.PanelHandler, '/state')
-    api.add_resource(sensors.SensorsHandler, '/device/<sensor_id>')
+    api.add_resource(konnected_server.SensorsHandler, '/device/<sensor_id>')
     api.add_resource(panelhandler.SettingsHandler, '/configuration')
 
     app.run(host="0.0.0.0", debug=True)

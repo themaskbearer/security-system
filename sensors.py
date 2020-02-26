@@ -1,19 +1,7 @@
 
-from flask import request
-from flask_restful import Resource, reqparse, abort
+import konnected
 import logging
-import json
-
-import alarmstates
-
 logger = logging.getLogger(__name__)
-
-
-sensor_list = {}
-
-parser = reqparse.RequestParser()
-parser.add_argument('state')
-parser.add_argument('pin')
 
 
 def load_sensors(config):
@@ -21,59 +9,67 @@ def load_sensors(config):
     sensor_id_list = sensors_ids.split(',')
 
     for sensor_id in sensor_id_list:
-        new_sensor = Sensor()
-        new_sensor.id = sensor_id
-        new_sensor.total_pins = config[sensor_id].getint('pins', 0)
-        new_sensor.ip = config[sensor_id].get('ip', "127.0.0.1")
-        new_sensor.port = config[sensor_id].get('port', 65000)
-
-        new_sensor.total_zones = config[sensor_id].getint('zones', 0)
-
-        for zone_number in range(1, new_sensor.total_zones + 1):
-            new_zone = Zone()
-            new_zone.number = zone_number
-            new_zone.name = config[sensor_id].get('zone' + str(zone_number) + '_name', '')
-            new_sensor.zones[zone_number] = new_zone
-
-        for pin_number in range(1, new_sensor.total_pins + 1):
-            pin_str = 'pin' + str(pin_number)
-
-            pin_type = config[sensor_id].get(pin_str)
-            if pin_type.lower() == 'output':
-                # Do stuff for output pins
-                pass
-            else:
-                new_pin = Pin()
-                new_pin.pin = pin_number
-
-                pin_zone = config[sensor_id].getint(pin_str + '_zone')
-                if pin_zone is not None:
-                    new_pin.zone = new_sensor.zones[pin_zone]
-                    new_pin.zone.pins[pin_number] = new_pin
-
-                new_sensor.pins[pin_number] = new_pin
+        new_sensor = Sensor(config[sensor_id])
+        new_sensor.load_zones_and_pins(config)
 
         sensor_list[sensor_id] = new_sensor
 
 
 class Sensor:
-    def __init__(self):
-        self.id = ""
-        self.total_pins = 0
-        self.total_zones = 0
-        self.ip = "127.0.0.1"
-        self.port = 12345
+    def __init__(self, config):
+        self.id = config.name
+        self.ip = config.get('ip', "127.0.0.1")
+        self.port = config.get('port', 65000)
+
+        self.total_pins = config.getint('pins', 0)
+        self.total_zones = config.getint('zones', 0)
+
+        self.konnected_client = konnected.Client(self.ip, self.port)
 
         self.zones = {}
         self.pins = {}
 
+    def load_zones_and_pins(self, config):
+        for zone_number in range(1, self.total_zones + 1):
+            new_zone = Zone(zone_number, config[self.id])
+            self.zones[zone_number] = new_zone
+
+        for pin_number in range(1, self.total_pins + 1):
+            pin_str = 'pin' + str(pin_number)
+
+            pin_type = config[self.id].get(pin_str)
+            if pin_type.lower() == 'output':
+                pin_name = config[self.id].get(pin_str + '_name')
+
+                if pin_name.lower() == 'chime':
+                    if door_chime.pin_number != 0:
+                        logger.error('Duplicate door chimes found.  Second Chime is pin ' + pin_str + '. This will be ignored')
+
+                    door_chime.pin_number = pin_number
+                    door_chime.sensor = self
+                    door_chime.load_chime_parameters_from_config(config['door_chime'])
+
+                elif pin_name.lower() == 'siren':
+                    pass
+            else:
+                new_pin = Pin(pin_number)
+
+                pin_zone = config[self.id].getint(pin_str + '_zone')
+                if pin_zone is not None:
+                    new_pin.zone = self.zones[pin_zone]
+                    new_pin.zone.pins[pin_number] = new_pin
+
+                self.pins[pin_number] = new_pin
+
 
 class Zone:
-    def __init__(self):
-        self.number = 0
+    def __init__(self, number, config):
+        self.number = number
+        self.name = config.get('zone' + str(number) + '_name', '')
+        self.chime_enabled = config.getboolean('zone' + str(number) + '_chime')
+
         self.pins = {}
         self.state = 0
-        self.name = ""
 
     def update_state(self):
         new_state = 0
@@ -84,46 +80,48 @@ class Zone:
 
 
 class Pin:
-    def __init__(self):
-        self.pin_number = 0
+    def __init__(self, number):
+        self.pin_number = number
         self.state = 0
         self.zone = None
 
 
-class SensorsHandler(Resource):
-    def abort_if_doesnt_exist(self, sensor_id):
-        if sensor_id not in sensor_list:
-            logger.info("Failed to find sensor id " + str(sensor_id) + " in available sensors")
-            abort(404, message="Sensor ID {} doesn't exist".format(sensor_id))
+class DoorChime:
+    def __init__(self):
+        self.pin_number = 0
+        self.sensor = None
 
-    def get(self, sensor_id):
-        logger.info("GET function for sensor_id " + str(sensor_id) + ", raw data: " + request.get_data(as_text=True))
-        self.abort_if_doesnt_exist(sensor_id)
+        self.number_of_beeps = 0
+        self.beep_duration_ms = 0
+        self.pause_duration_ms = 0
 
-        # TODO: determine serialization to return
-        # Does this matter?  This is for konnected
-        return json.dumps(sensor_list[sensor_id], default=lambda o: o.__dict__, indent=4)
+    def load_chime_parameters_from_config(self, config):
+        pass
 
-    def put(self, sensor_id):
-        logger.info("PUT function for sensor_id " + str(sensor_id) + ", raw data: " + request.get_data(as_text=True))
-        self.abort_if_doesnt_exist(sensor_id)
+    def play_chime(self):
+        logger.info("Playing door chime")
+        # self.sensor.konnected_client.put_device(self.pin_number,
+        #                                         1,
+        #                                         self.beep_duration_ms,
+        #                                         self.number_of_beeps,
+        #                                         self.pause_duration_ms)
 
-        args = parser.parse_args()
-        pin_number = int(args['pin'])
-        if pin_number not in sensor_list[sensor_id].pins:
-            abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))
 
-        pin = sensor_list[sensor_id].pins[pin_number]
-        pin.state = int(args['state'])
+class Siren:
+    def __init(self):
+        self.pin_number = 0
+        self.sensor = None
 
-        # TODO: Process door chime
+    def activate_siren(self):
+        pass
 
-        if pin.zone is not None:
-            pin.zone.update_state()
+    def deactivate_siren(self):
+        pass
 
-            if pin.zone.state == 1:
-                zone_data = (sensor_id, pin.zone.number)
-                alarmstates.alarm_state_machine.process_event(alarmstates.EventType.sensor_changed, zone_data)
 
-        return 200
+sensor_list = {}
+door_chime = DoorChime()
+siren = Siren()
+
+
 

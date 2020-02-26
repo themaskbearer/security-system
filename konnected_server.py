@@ -46,7 +46,8 @@ class SensorsHandler(Resource):
             pin.zone.update_state()
 
             if pin.zone.state == 1:
-                if pin.zone.chime_enabled:
+                if pin.zone.chime_enabled and\
+                        alarmstates.alarm_state_machine.get_current_state() == alarmstates.StateType.disarmed:
                     sensors.door_chime.play_chime()
 
                 zone_data = (sensor_id, pin.zone.number)

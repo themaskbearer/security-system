@@ -8,48 +8,48 @@ import sensors
 logger = logging.getLogger(__name__)
 
 
+def load_state_configurations(config):
+    global alert_timeout_s
+    alert_timeout_s = config['alert'].getint('duration_s')
+    arm_configurations.load_from_config(config)
+
+
 class ArmConfigurations:
     def __init__(self):
         self.configurations = {}
         self.current_configuration = ''
+
+    def load_from_config(self, config):
+        config_names = config['arm_configs'].get('configurations')
+        config_name_list = config_names.split(',')
+
+        for name in config_name_list:
+            new_arm_config = ArmConfiguration(name, config[name])
+            self.configurations[name] = new_arm_config
 
     def get_current_configuration(self):
         return self.configurations[self.current_configuration]
 
 
 class ArmConfiguration:
-    def __init__(self, name):
+    def __init__(self, name, config):
         self.name = name
-        self.sensors = []
         self.zones = {}
 
-
-arm_configurations = ArmConfigurations()
-
-
-def load_arm_configurations(config):
-    config_names = config['arm_configs'].get('configurations')
-    config_name_list = config_names.split(',')
-
-    for name in config_name_list:
-        new_config = ArmConfiguration(name)
-        sensors = config[name].get('sensors')
-        sensor_list = sensors.split(',')
-        new_config.sensors = sensor_list
+        sensors_str = config.get('sensors')
+        sensor_list = sensors_str.split(',')
+        self.sensors = sensor_list
 
         for sensor in sensor_list:
-            zones = config[name].get(sensor + "_zones")
+            zones = config.get(sensor + "_zones")
             zone_list = zones.split(',')
             zone_list = map(int, zone_list)
-            new_config.zones[sensor] = list(zone_list)
-
-        arm_configurations.configurations[name] = new_config
+            self.zones[sensor] = list(zone_list)
 
 
 def is_valid_arm_config(config):
     if config in arm_configurations.configurations:
         return True
-
     return False
 
 
@@ -129,13 +129,13 @@ class Alert(State):
         State.__init__(self, StateType.alert)
         self.add_transition(EventType.disarm, StateType.disarmed)
         self.add_transition(EventType.alert_expired, StateType.alarm)
+
         self._transition_timer = None
 
     def on_entry(self):
-        # TODO: pull the duration from the config file
         sensors.tone_generator.play_constant_tone()
 
-        self._transition_timer = threading.Timer(30.0, self.process_expired_alert)
+        self._transition_timer = threading.Timer(alert_timeout_s, self.process_expired_alert)
         self._transition_timer.start()
         State.on_entry(self)
 
@@ -196,5 +196,5 @@ class AlarmStateMachine:
 
 
 alarm_state_machine = AlarmStateMachine()
-
-
+arm_configurations = ArmConfigurations()
+alert_timeout_s = 30

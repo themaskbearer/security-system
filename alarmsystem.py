@@ -22,7 +22,7 @@ def load_config(filename):
     config.read(filename)
 
     sensors.load_sensors(config)
-    alarmstates.load_arm_configurations(config)
+    alarmstates.load_state_configurations(config)
 
 
 if __name__ == '__main__':

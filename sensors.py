@@ -43,12 +43,12 @@ class Sensor:
                 pin_name = config[self.id].get(pin_str + '_name')
 
                 if pin_name.lower() == 'chime':
-                    if door_chime.pin_number != 0:
+                    if tone_generator.pin_number != 0:
                         logger.error('Duplicate door chimes found.  Second Chime is pin ' + pin_str + '. This will be ignored')
 
-                    door_chime.pin_number = pin_number
-                    door_chime.sensor = self
-                    door_chime.load_chime_parameters_from_config(config['door_chime'])
+                    tone_generator.pin_number = pin_number
+                    tone_generator.sensor = self
+                    tone_generator.load_chime_parameters_from_config(config['door_chime'])
 
                 elif pin_name.lower() == 'siren':
                     pass
@@ -81,7 +81,7 @@ class Zone:
 
     def process_door_chime(self):
         if self.chime_enabled:
-            door_chime.play_chime()
+            tone_generator.play_chime()
 
 
 class Pin:
@@ -101,7 +101,7 @@ class Pin:
         return self.zone.number
 
 
-class DoorChime:
+class ToneGenerator:
     def __init__(self):
         self.pin_number = 0
         self.sensor = None
@@ -111,7 +111,17 @@ class DoorChime:
         self.pause_duration_ms = 0
 
     def load_chime_parameters_from_config(self, config):
-        pass
+        self.number_of_beeps = config.getint('num_beeps')
+        self.beep_duration_ms = config.getint('beep_duration_ms')
+        self.pause_duration_ms = config.getint('pause_duration_ms')
+
+    def play_constant_tone(self):
+        logger.info("Playing tone")
+        # self.sensor.konnected_client.put_device(self.pin_number, 1)
+
+    def stop_constant_tone(self):
+        logger.info("Stopping tone")
+        # self.sensor.konnected_client.put_device(self.pin_number, 0)
 
     def play_chime(self):
         logger.info("Playing door chime")
@@ -135,7 +145,7 @@ class Siren:
 
 
 sensor_list = {}
-door_chime = DoorChime()
+tone_generator = ToneGenerator()
 siren = Siren()
 ZoneData = collections.namedtuple('ZoneData', ['sensor_id', 'zone_number'])
 

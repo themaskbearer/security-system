@@ -132,14 +132,16 @@ class Alert(State):
         self._transition_timer = None
 
     def on_entry(self):
-        # TODO: turn on warning beep
         # TODO: pull the duration from the config file
+        sensors.tone_generator.play_constant_tone()
+
         self._transition_timer = threading.Timer(30.0, self.process_expired_alert)
         self._transition_timer.start()
         State.on_entry(self)
 
     def on_exit(self):
-        # TODO: turn off warning beep
+        sensors.tone_generator.stop_constant_tone()
+
         self._transition_timer.cancel()
         State.on_exit(self)
 

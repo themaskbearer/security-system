@@ -40,17 +40,9 @@ class SensorsHandler(Resource):
             abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))
 
         pin = sensors.sensor_list[sensor_id].pins[pin_number]
-        pin.state = int(args['state'])
+        pin.update_state(int(args['state']))
 
-        if pin.zone is not None:
-            pin.zone.update_state()
-
-            if pin.zone.state == 1:
-                if pin.zone.chime_enabled and\
-                        alarmstates.alarm_state_machine.get_current_state() == alarmstates.StateType.disarmed:
-                    sensors.door_chime.play_chime()
-
-                zone_data = (sensor_id, pin.zone.number)
-                alarmstates.alarm_state_machine.process_event(alarmstates.EventType.sensor_changed, zone_data)
+        zone_data = sensors.ZoneData(sensor_id, pin.zone.number)
+        alarmstates.alarm_state_machine.process_event(alarmstates.EventType.sensor_changed, zone_data)
 
         return 200

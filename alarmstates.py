@@ -3,6 +3,8 @@ from enum import Enum
 import logging
 import threading
 
+import sensors
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,9 +98,10 @@ class Disarmed(State):
     def process_event(self, event, data):
         if event == EventType.arm:
             arm_configurations.current_configuration = data
-            return State.process_event(self, event, data)
-        else:
-            return State.process_event(self, event, data)
+        elif event == EventType.sensor_changed:
+            sensors.sensor_list[data.sensor_id].zones[data.zone_number].process_door_chime()
+
+        return State.process_event(self, event, data)
 
 
 class Armed(State):
@@ -110,11 +113,9 @@ class Armed(State):
     def process_event(self, event, data):
         if event == EventType.sensor_changed:
             current_arm_config = arm_configurations.get_current_configuration()
-            sensor = data[0]
-            zone = data[1]
 
-            if sensor in current_arm_config.sensors:
-                if zone in current_arm_config.zones[sensor]:
+            if data.sensor_id in current_arm_config.sensors:
+                if data.zone_number in current_arm_config.zones[data.sensor_id]:
                     return State.process_event(self, event, data)
 
             return StateType.armed
@@ -173,9 +174,6 @@ class AlarmStateMachine:
 
     def get_current_state(self):
         return self._current_state
-
-    def get_zone_status(self):
-        pass
 
     def process_event(self, event, data):
         new_state = self._state_machine[self._current_state].process_event(event, data)

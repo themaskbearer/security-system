@@ -1,5 +1,6 @@
 
 import konnected
+import collections
 import logging
 logger = logging.getLogger(__name__)
 
@@ -78,12 +79,26 @@ class Zone:
 
         self.state = new_state
 
+    def process_door_chime(self):
+        if self.chime_enabled:
+            door_chime.play_chime()
+
 
 class Pin:
     def __init__(self, number):
         self.pin_number = number
         self.state = 0
         self.zone = None
+
+    def update_state(self, new_state):
+        self.state = new_state
+        if self.zone is not None:
+            self.zone.update_state()
+
+    def get_zone_number(self):
+        if self.zone is None:
+            return 0
+        return self.zone.number
 
 
 class DoorChime:
@@ -122,6 +137,6 @@ class Siren:
 sensor_list = {}
 door_chime = DoorChime()
 siren = Siren()
-
+ZoneData = collections.namedtuple('ZoneData', ['sensor_id', 'zone_number'])
 
 

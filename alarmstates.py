@@ -156,11 +156,11 @@ class Alarm(State):
         self.add_transition(EventType.disarm, StateType.disarmed)
 
     def on_entry(self):
-        # turn on siren
+        sensors.siren.activate_siren()
         State.on_entry(self)
 
     def on_exit(self):
-        # turn off siren
+        sensors.siren.deactivate_siren()
         State.on_exit(self)
 
 

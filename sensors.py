@@ -40,18 +40,7 @@ class Sensor:
 
             pin_type = config[self.id].get(pin_str)
             if pin_type.lower() == 'output':
-                pin_name = config[self.id].get(pin_str + '_name')
-
-                if pin_name.lower() == 'chime':
-                    if tone_generator.pin_number != 0:
-                        logger.error('Duplicate door chimes found.  Second Chime is pin ' + pin_str + '. This will be ignored')
-
-                    tone_generator.pin_number = pin_number
-                    tone_generator.sensor = self
-                    tone_generator.load_chime_parameters_from_config(config['door_chime'])
-
-                elif pin_name.lower() == 'siren':
-                    pass
+                self.load_output_pin((pin_number, pin_str), config)
             else:
                 new_pin = Pin(pin_number)
 
@@ -61,6 +50,25 @@ class Sensor:
                     new_pin.zone.pins[pin_number] = new_pin
 
                 self.pins[pin_number] = new_pin
+
+    def load_output_pin(self, pin_params, config):
+        pin_number, id_str = pin_params
+        pin_name = config[self.id].get(id_str + '_name')
+
+        if pin_name.lower() == 'chime':
+            if tone_generator.pin_number != 0:
+                logger.error('Duplicate chimes found.  Second Chime is pin ' + id_str + '. This will be ignored')
+
+            tone_generator.pin_number = pin_number
+            tone_generator.sensor = self
+            tone_generator.load_chime_parameters_from_config(config['door_chime'])
+
+        elif pin_name.lower() == 'siren':
+            if siren.pin_number != 0:
+                logger.error('Duplicate sirens found.  Second Chime is pin ' + id_str + '. This will be ignored')
+
+            siren.pin_number = pin_number
+            siren.sensor = self
 
 
 class Zone:
@@ -133,15 +141,17 @@ class ToneGenerator:
 
 
 class Siren:
-    def __init(self):
+    def __init__(self):
         self.pin_number = 0
         self.sensor = None
 
     def activate_siren(self):
-        pass
+        logger.info("Siren activated")
+        # self.sensor.konnected_client.put_device(self.pin_number, 1)
 
     def deactivate_siren(self):
-        pass
+        logger.info("Siren deactivated")
+        # self.sensor.konnected_client.put_device(self.pin_number, 0)
 
 
 sensor_list = {}

@@ -125,19 +125,19 @@ class ToneGenerator:
 
     def play_constant_tone(self):
         logger.info("Playing tone")
-        # self.sensor.konnected_client.put_device(self.pin_number, 1)
+        self.sensor.konnected_client.put_device(self.pin_number, 1)
 
     def stop_constant_tone(self):
         logger.info("Stopping tone")
-        # self.sensor.konnected_client.put_device(self.pin_number, 0)
+        self.sensor.konnected_client.put_device(self.pin_number, 0)
 
     def play_chime(self):
         logger.info("Playing door chime")
-        # self.sensor.konnected_client.put_device(self.pin_number,
-        #                                         1,
-        #                                         self.beep_duration_ms,
-        #                                         self.number_of_beeps,
-        #                                         self.pause_duration_ms)
+        self.sensor.konnected_client.put_device(self.pin_number,
+                                                1,
+                                                self.beep_duration_ms,
+                                                self.number_of_beeps,
+                                                self.pause_duration_ms)
 
 
 class Siren:
@@ -147,11 +147,11 @@ class Siren:
 
     def activate_siren(self):
         logger.info("Siren activated")
-        # self.sensor.konnected_client.put_device(self.pin_number, 1)
+        self.sensor.konnected_client.put_device(self.pin_number, 1)
 
     def deactivate_siren(self):
         logger.info("Siren deactivated")
-        # self.sensor.konnected_client.put_device(self.pin_number, 0)
+        self.sensor.konnected_client.put_device(self.pin_number, 0)
 
 
 sensor_list = {}

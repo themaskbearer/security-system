@@ -24,15 +24,10 @@ def load_config(filename):
     sensors.load_sensors(config)
     alarmstates.load_state_configurations(config)
 
+#   sensors.initialize_sensor_hardware(config)
+
 
 if __name__ == '__main__':
-
-    config_filename = 'config.ini'
-    if len(sys.argv) > 1:
-        config_filename = sys.argv[1]
-    logging.info("Using %s as the configuration file", config_filename)
-
-    load_config(config_filename)
 
     app = Flask(__name__)
     api = Api(app)
@@ -40,6 +35,13 @@ if __name__ == '__main__':
     api.add_resource(panelhandler.PanelHandler, '/state')
     api.add_resource(konnected_server.SensorsHandler, '/device/<sensor_id>')
     api.add_resource(panelhandler.SettingsHandler, '/configuration')
+
+    config_filename = 'config.ini'
+    if len(sys.argv) > 1:
+        config_filename = sys.argv[1]
+    logging.info("Using %s as the configuration file", config_filename)
+
+    load_config(config_filename)
 
     app.run(host="0.0.0.0", debug=True)
 

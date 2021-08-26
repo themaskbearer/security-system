@@ -16,6 +16,11 @@ def load_sensors(config):
         sensor_list[sensor_id] = new_sensor
 
 
+def initialize_sensor_hardware(config):
+    for sensor in sensor_list.values():
+        sensor.initialize_hardware(config)
+
+
 class Sensor:
     def __init__(self, config):
         self.id = config.name
@@ -69,6 +74,23 @@ class Sensor:
 
             siren.pin_number = pin_number
             siren.sensor = self
+
+    def initialize_hardware(self, config):
+        inputs = []
+        for pin in self.pins.values():
+            inputs.append({'pin': pin.pin_number})
+
+        outputs = []
+        if tone_generator.pin_number != 0:
+            outputs.append({'pin': tone_generator.pin_number})
+        if siren.pin_number != 0:
+            outputs.append({'pin': siren.pin_number})
+
+        token = config['server'].get('token', 'secureToken')
+        url = config['server'].get('url', '127.0.0.1')
+        port = config['server'].get('port', '5000')
+
+        self.konnected_client.put_settings(inputs, outputs, 'secureToken', 'http://' + url + ':' + port)
 
 
 class Zone:

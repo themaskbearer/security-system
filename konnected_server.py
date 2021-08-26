@@ -10,9 +10,12 @@ import sensors
 
 logger = logging.getLogger(__name__)
 
-parser = reqparse.RequestParser()
-parser.add_argument('state')
-parser.add_argument('pin')
+put_parser = reqparse.RequestParser()
+put_parser.add_argument('state')
+put_parser.add_argument('pin')
+
+get_parser = reqparse.RequestParser()
+get_parser.add_argument('pin', type=int)
 
 
 def abort_if_doesnt_exist(sensor_id):
@@ -23,18 +26,19 @@ def abort_if_doesnt_exist(sensor_id):
 
 class SensorsHandler(Resource):
     def get(self, sensor_id):
+        # This call is primarily used on startup to query what the state of the output pins should be
         logger.info("GET function for sensor_id " + str(sensor_id) + ", raw data: " + request.get_data(as_text=True))
         abort_if_doesnt_exist(sensor_id)
+        args = get_parser.parse_args()
 
-        # TODO: determine serialization to return
-        # Does this matter?  This is for konnected
-        return json.dumps(sensors.sensor_list[sensor_id], default=lambda o: o.__dict__, indent=4)
+        # TODO: get initial state from config file
+        return {'state': 0, 'pin': args['pin']}
 
     def put(self, sensor_id):
         logger.info("PUT function for sensor_id " + str(sensor_id) + ", raw data: " + request.get_data(as_text=True))
         abort_if_doesnt_exist(sensor_id)
 
-        args = parser.parse_args()
+        args = put_parser.parse_args()
         pin_number = int(args['pin'])
         if pin_number not in sensors.sensor_list[sensor_id].pins:
             abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))

@@ -9,6 +9,7 @@ from flask_restful import Api
 import sys
 import configparser
 import logging
+import argparse
 import panelhandler
 import alarmstates
 import sensors
@@ -27,22 +28,27 @@ def load_config(filename):
 #   sensors.initialize_sensor_hardware(config)
 
 
+app = Flask(__name__)
+api = Api(app)
+
+api.add_resource(panelhandler.PanelHandler, '/state')
+api.add_resource(konnected_server.SensorsHandler, '/device/<sensor_id>')
+api.add_resource(panelhandler.SettingsHandler, '/configuration')
+
+config_filename = 'config.ini'
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--config')
+args, extra_args = parser.parse_known_args()
+
+if args.config:
+    config_filename = args.config
+logging.info("Using %s as the configuration file", config_filename)
+
+load_config(config_filename)
+
 if __name__ == '__main__':
-
-    app = Flask(__name__)
-    api = Api(app)
-
-    api.add_resource(panelhandler.PanelHandler, '/state')
-    api.add_resource(konnected_server.SensorsHandler, '/device/<sensor_id>')
-    api.add_resource(panelhandler.SettingsHandler, '/configuration')
-
-    config_filename = 'config.ini'
-    if len(sys.argv) > 1:
-        config_filename = sys.argv[1]
-    logging.info("Using %s as the configuration file", config_filename)
-
-    load_config(config_filename)
-
+    logging.info("Running standalone server")
     app.run(host="0.0.0.0", debug=True)
 
 

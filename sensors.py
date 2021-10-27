@@ -1,7 +1,11 @@
 
+import time
 import konnected
 import collections
 import logging
+
+import simplethread
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,6 +26,8 @@ def initialize_sensor_hardware(config):
 
 
 class Sensor:
+    HEART_BEAT_TIMEOUT_S = 5
+
     def __init__(self, config):
         self.id = config.name
         self.ip = config.get('ip', "127.0.0.1")
@@ -33,7 +39,14 @@ class Sensor:
         self.konnected_client = konnected.Client(self.ip, self.port)
 
         self.zones = {}
-        self.pins = {}
+        self.input_pins = {}
+        self.output_pins = {}
+
+        self._heart_beat_check = SensorLivenessCheck(self)
+        self._heart_beat_check.start()
+
+    def __del__(self):
+        self._heart_beat_check.stop()
 
     def load_zones_and_pins(self, config):
         for zone_number in range(1, self.total_zones + 1):
@@ -54,7 +67,7 @@ class Sensor:
                     new_pin.zone = self.zones[pin_zone]
                     new_pin.zone.pins[pin_number] = new_pin
 
-                self.pins[pin_number] = new_pin
+                self.input_pins[pin_number] = new_pin
 
     def load_output_pin(self, pin_params, config):
         pin_number, id_str = pin_params
@@ -75,9 +88,11 @@ class Sensor:
             siren.pin_number = pin_number
             siren.sensor = self
 
+        self.output_pins[pin_number] = Pin(pin_number)
+
     def initialize_hardware(self, config):
         inputs = []
-        for pin in self.pins.values():
+        for pin in self.input_pins.values():
             inputs.append({'pin': pin.pin_number})
 
         outputs = []
@@ -91,6 +106,54 @@ class Sensor:
         port = config['server'].get('port', '5000')
 
         self.konnected_client.put_settings(inputs, outputs, 'secureToken', 'http://' + url + ':' + port)
+
+
+class SensorLivenessCheck(simplethread.SimpleThread):
+    CONST_HEARTBEAT_PERIOD_s = 5
+
+    def __init__(self, sensor):
+        self._sensor = sensor
+        self._sensor_alive = False
+
+    def thread_loop(self):
+        while self._running is True:
+            sensor_status = self._sensor.konnected_client.get_status()
+
+            input_pins = sensor_status['sensors']
+            if self.compare_pins(self._sensor.input_pins, input_pins) is False:
+                # TODO: reconfigure sensor
+                logger.info("Need to reconfigure sensor due to inputs not configured correctly")
+                pass
+
+            output_pins = sensor_status['actuators']
+            if SensorLivenessCheck.compare_pins(self._sensor.output_pins, output_pins) is False:
+                # TODO: reconfigure sensor
+                logger.info("Need to reconfigure sensor due to outputs not configured correctly")
+                pass
+
+            logger.debug("Received status from sensor: " + sensor_status['mac'])
+
+            time.sleep(self.CONST_HEARTBEAT_PERIOD_s)
+
+    # Check through the list of configured pins reported from the sensor to see if there is a mismatch
+    # By individually ensuring that each pin from sensor is present from config, and then comparing
+    # the numbers of configured pins, that SHOULD catch all error cases
+    # - More config pins than sensor-reported pins
+    # - Equal numbers but different pins
+    # - More sensor-reported pins than config pins
+    @staticmethod
+    def compare_pins(config_pins, reported_pins):
+        for pin in reported_pins:
+            pin_number = pin['pin']
+            if pin_number not in config_pins:
+                logger.warning("Found invalid pin number from sensor: " + str(pin_number))
+                return False
+
+        if len(reported_pins) != len(config_pins):
+            logger.warning("Found mismatched configured pin counts from sensor and config")
+            return False
+
+        return True
 
 
 class Zone:

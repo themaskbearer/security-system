@@ -40,10 +40,10 @@ class SensorsHandler(Resource):
 
         args = put_parser.parse_args()
         pin_number = int(args['pin'])
-        if pin_number not in sensors.sensor_list[sensor_id].pins:
+        if pin_number not in sensors.sensor_list[sensor_id].input_pins:
             abort(404, message="Pin number {} not found in sensor {}".format(args['pin'], sensor_id))
 
-        pin = sensors.sensor_list[sensor_id].pins[pin_number]
+        pin = sensors.sensor_list[sensor_id].input_pins[pin_number]
         pin.update_state(int(args['state']))
 
         zone_data = sensors.ZoneData(sensor_id, pin.zone.number)

@@ -6,10 +6,10 @@
 
 from flask import Flask
 from flask_restful import Api
-import sys
 import configparser
 import logging
 import argparse
+
 import panelhandler
 import alarmstates
 import sensors
@@ -18,14 +18,13 @@ import konnected_server
 logging.basicConfig(level=logging.INFO)
 
 
-def load_config(filename):
-    config = configparser.ConfigParser()
-    config.read(filename)
+class AlarmSystem:
+    def __init__(self, config_file='config.ini'):
+        config = configparser.ConfigParser()
+        config.read(config_file)
 
-    sensors.load_sensors(config)
-    alarmstates.load_state_configurations(config)
-
-#   sensors.initialize_sensor_hardware(config)
+        sensors.load_sensors(config)
+        alarmstates.load_state_configurations(config)
 
 
 app = Flask(__name__)
@@ -45,7 +44,7 @@ if args.config:
     config_filename = args.config
 logging.info("Using %s as the configuration file", config_filename)
 
-load_config(config_filename)
+alarm_system = AlarmSystem(config_filename)
 
 if __name__ == '__main__':
     logging.info("Running standalone server")

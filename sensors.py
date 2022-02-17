@@ -160,7 +160,7 @@ class Zone:
     def __init__(self, number, config):
         self.number = number
         self.name = config.get('zone' + str(number) + '_name', '')
-        self.chime_enabled = config.getboolean('zone' + str(number) + '_chime')
+        self.chime_enabled = config.getboolean('zone' + str(number) + '_chime', False)
 
         self.pins = {}
         self.state = 0

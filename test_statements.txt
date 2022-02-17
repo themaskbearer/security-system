@@ -16,3 +16,10 @@ curl http://127.0.0.1:5000/device/123456789012 -d '{"state":1,"pin":2}' -X put -
 
 Konnected setup example:
 k.put_settings([{"pin":2},{"pin":3}],[{"pin":1}],'secureToken','http://X.X.X.X:1234')
+
+
+Running from flask launcher:
+export FLASK_APP=alarmsystem
+export FLASK_ENV=development
+flask run --host=0.0.0.0
+use --no-reload to stop the stat reloading

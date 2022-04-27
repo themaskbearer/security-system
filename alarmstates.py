@@ -30,6 +30,11 @@ class ArmConfigurations:
     def get_current_configuration(self):
         return self.configurations[self.current_configuration]
 
+    def is_valid_arm_config(self, arm_config):
+        if arm_config in self.configurations:
+            return True
+        return False
+
 
 class ArmConfiguration:
     def __init__(self, name, config):
@@ -47,12 +52,6 @@ class ArmConfiguration:
             self.zones[sensor] = list(zone_list)
 
 
-def is_valid_arm_config(config):
-    if config in arm_configurations.configurations:
-        return True
-    return False
-
-
 class EventType(Enum):
     arm = 1
     disarm = 2
@@ -68,9 +67,10 @@ class StateType(Enum):
 
 
 class State:
-    def __init__(self, self_state):
+    def __init__(self, self_state, owning_machine):
         self._transitions = {}
         self._self_state = self_state
+        self._owning_machine = owning_machine
 
     def process_event(self, event, data):
         if event in self._transitions:
@@ -91,8 +91,8 @@ class State:
 
 
 class Disarmed(State):
-    def __init__(self):
-        State.__init__(self, StateType.disarmed)
+    def __init__(self, owning_machine):
+        State.__init__(self, StateType.disarmed, owning_machine)
         self.add_transition(EventType.arm, StateType.armed)
 
     def process_event(self, event, data):
@@ -105,8 +105,8 @@ class Disarmed(State):
 
 
 class Armed(State):
-    def __init__(self):
-        State.__init__(self, StateType.armed)
+    def __init__(self, owning_machine):
+        State.__init__(self, StateType.armed, owning_machine)
         self.add_transition(EventType.disarm, StateType.disarmed)
         self.add_transition(EventType.sensor_changed, StateType.alert)
 
@@ -125,8 +125,8 @@ class Armed(State):
 
 
 class Alert(State):
-    def __init__(self):
-        State.__init__(self, StateType.alert)
+    def __init__(self, owning_machine):
+        State.__init__(self, StateType.alert, owning_machine)
         self.add_transition(EventType.disarm, StateType.disarmed)
         self.add_transition(EventType.alert_expired, StateType.alarm)
 
@@ -147,12 +147,12 @@ class Alert(State):
 
     def process_expired_alert(self):
         logger.info("Alert timer expired, transitioning to Alarm")
-        alarm_state_machine.process_event(EventType.alert_expired, None)
+        self._owning_machine.process_event(EventType.alert_expired, None)
 
 
 class Alarm(State):
-    def __init__(self):
-        State.__init__(self, StateType.alarm)
+    def __init__(self, owning_machine):
+        State.__init__(self, StateType.alarm, owning_machine)
         self.add_transition(EventType.disarm, StateType.disarmed)
 
     def on_entry(self):
@@ -166,10 +166,10 @@ class Alarm(State):
 
 class AlarmStateMachine:
     def __init__(self):
-        self._state_machine = {StateType.disarmed: Disarmed(),
-                               StateType.armed: Armed(),
-                               StateType.alert: Alert(),
-                               StateType.alarm: Alarm()}
+        self._state_machine = {StateType.disarmed: Disarmed(self),
+                               StateType.armed: Armed(self),
+                               StateType.alert: Alert(self),
+                               StateType.alarm: Alarm(self)}
 
         self._current_state = StateType.disarmed
         self._state_machine[self._current_state].on_entry()

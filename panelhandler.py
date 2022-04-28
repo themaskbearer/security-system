@@ -21,7 +21,7 @@ class PanelHandler(Resource):
             return {'error': 'invalid event ' + args['event']}, 400
 
         if event == alarmstates.EventType.arm:
-            if not alarmstates.is_valid_arm_config(config):
+            if not alarmstates.arm_configurations.is_valid_arm_config(config):
                 return {'error': 'invalid arm_config ' + (config if config else "")}, 400
 
         state = alarmstates.alarm_state_machine.process_event(event, config)

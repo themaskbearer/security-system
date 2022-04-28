@@ -2,7 +2,7 @@
 interact with panel:
 curl http://127.0.0.1:5000/state -X get
 
-curl http://127.0.0.1:5000/state -d "event=disarm" -X post
+curl http://127.0.0.1:5000/state -d '{"event":"disarm"}' -X post -H "Content-Type: application/json"
 curl http://127.0.0.1:5000/state -d '{"event":"arm","arm_config":"Stay"}' -X post -H "Content-Type: application/json"
 
 Testing sensors:
